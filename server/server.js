@@ -1,6 +1,9 @@
 require("dotenv").config();
 
 const express = require("express");
+const mongoose = require("mongoose");
+const Task = require("./models/Task");
+
 
 const app = express();
 app.use(express.json());
@@ -21,34 +24,49 @@ app.get("/api/health",(req,res) =>{
     });
 });
 
-app.post("/api/tasks",(req,res) => {
-    const {title, description, dueDate, priority} = req.body;
-    if(!title || typeof title != "string" || !title.trim()){
-        return res.status(400).json({
-            error: "Title is required and must be a non-empty string"
-        });
+
+app.post("/api/tasks", async (req, res) => {
+  try {
+    const { title, description, dueAt, priority } = req.body || {};
+
+    if (
+      typeof title !== "string" ||
+      !title.trim()
+    ) {
+      return res.status(400).json({
+        error: "Title is required and must be a non-empty string"
+      });
     }
 
-    const task = {
-        id: nextId++,
-        title: title.trim(),
-        description: description || "",
-        dueDate: dueDate || null,
-        priority: priority || "medium",
-        status: "pending",
-        createdAt: new Date().toISOString()
-    };
-
-    tasks.push(task);
+    const task = await Task.create({
+      title: title.trim(),
+      description,
+      dueAt,
+      priority
+    });
 
     res.status(201).json({
-        message: "Task created Successfully",
-        task: task
+      message: "Task created successfully",
+      task
     });
+  } catch (error) {
+    if (error.name === "ValidationError" || error.name === "CastError") {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    console.error("Failed to create task:", error.message);
+
+    res.status(500).json({
+      error: "Failed to create task"
+    });
+  }
 });
 
 
-const mongoose = require("mongoose");
+
+
 
 async function connectDB() {
   try {
