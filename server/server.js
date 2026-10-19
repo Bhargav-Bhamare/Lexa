@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const Task = require("./models/Task");
-
+const ShoppingItem = require("./models/ShoppingItem");
 
 const app = express();
 app.use(express.json());
@@ -214,6 +214,177 @@ app.delete("/api/tasks/:id", async (req, res) => {
   }
 });
 
+
+//Shopping items api
+
+
+app.post("/api/shopping", async (req, res) => {
+  try {
+    const { name, quantity } = req.body || {};
+
+    if (typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({
+        error: "Item name is required"
+      });
+    }
+
+    const item = await ShoppingItem.create({
+      name: name.trim(),
+      quantity
+    });
+
+    res.status(201).json({
+      message: "Shopping item added successfully",
+      item
+    });
+  } catch (error) {
+    if (
+      error.name === "ValidationError" ||
+      error.name === "CastError"
+    ) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    console.error("Failed to add shopping item:", error.message);
+
+    res.status(500).json({
+      error: "Failed to add shopping item"
+    });
+  }
+});
+
+
+app.get("/api/shopping", async (req, res) => {
+  try {
+    const items = await ShoppingItem.find().sort({
+      createdAt: -1
+    });
+
+    res.status(200).json({
+      count: items.length,
+      items
+    });
+  } catch (error) {
+    console.error("Failed to fetch shopping items:", error.message);
+
+    res.status(500).json({
+      error: "Failed to fetch shopping items"
+    });
+  }
+});
+
+
+
+app.patch("/api/shopping/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid shopping item ID"
+      });
+    }
+
+    const allowedFields = ["name", "quantity", "purchased"];
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (req.body && req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: "Provide at least one valid field to update"
+      });
+    }
+
+    if (
+      updates.name !== undefined &&
+      (typeof updates.name !== "string" || !updates.name.trim())
+    ) {
+      return res.status(400).json({
+        error: "Item name must be a non-empty string"
+      });
+    }
+
+    const taskUpdates = { ...updates };
+
+    if (typeof taskUpdates.name === "string") {
+      taskUpdates.name = taskUpdates.name.trim();
+    }
+
+    const item = await ShoppingItem.findByIdAndUpdate(
+      id,
+      taskUpdates,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!item) {
+      return res.status(404).json({
+        error: "Shopping item not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Shopping item updated successfully",
+      item
+    });
+  } catch (error) {
+    if (
+      error.name === "ValidationError" ||
+      error.name === "CastError"
+    ) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    console.error("Failed to update shopping item:", error.message);
+
+    res.status(500).json({
+      error: "Failed to update shopping item"
+    });
+  }
+});
+
+
+app.delete("/api/shopping/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid shopping item ID"
+      });
+    }
+
+    const item = await ShoppingItem.findByIdAndDelete(id);
+
+    if (!item) {
+      return res.status(404).json({
+        error: "Shopping item not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Shopping item deleted successfully",
+      item
+    });
+  } catch (error) {
+    console.error("Failed to delete shopping item:", error.message);
+
+    res.status(500).json({
+      error: "Failed to delete shopping item"
+    });
+  }
+});
 
 
 
