@@ -40,6 +40,38 @@ app.get("/api/tasks", async (req, res) => {
 });
 
 
+app.get("/api/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid task ID"
+      });
+    }
+
+    const task = await Task.findById(id);
+
+    if (!task) {
+      return res.status(404).json({
+        error: "Task not found"
+      });
+    }
+
+    res.status(200).json({
+      task
+    });
+  } catch (error) {
+    console.error("Failed to fetch task:", error.message);
+
+    res.status(500).json({
+      error: "Failed to fetch task"
+    });
+  }
+});
+
+
+
 
 app.post("/api/tasks", async (req, res) => {
   try {
