@@ -5,24 +5,24 @@ const reminderSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, "Reminder title is required"],
+      required:[true, "Reminder title is required"],
       trim: true,
-      minlength: [1, "Reminder title cannot be empty"],
-      maxlength: [150, "Reminder title cannot exceed 150 characters"]
+      minlength:[1, "Reminder title cannot be empty"],
+      maxlength:[150, "Reminder title cannot exceed 150 characters"]
     },
 
     remindAt: {
       type: Date,
-      required: [true, "Reminder date and time are required"]
+      required:[true, "Reminder date and time are required"]
     },
 
-    completed: {
+    completed:{
       type: Boolean,
-      default: false
+      default:false
     }
   },
   {
-    timestamps: true
+    timestamps:true
   }
 );
 

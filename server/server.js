@@ -4,6 +4,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const Task = require("./models/Task");
 const ShoppingItem = require("./models/ShoppingItem");
+const Reminder = require("./models/Reminder");
+
 
 const app = express();
 app.use(express.json());
@@ -385,6 +387,192 @@ app.delete("/api/shopping/:id", async (req, res) => {
     });
   }
 });
+
+//API for Reminders
+
+
+app.post("/api/reminders", async (req, res) => {
+  try {
+    const { title, remindAt } = req.body || {};
+
+    if (typeof title !== "string" || !title.trim()) {
+      return res.status(400).json({
+        error: "Reminder title is required"
+      });
+    }
+
+    if (!remindAt) {
+      return res.status(400).json({
+        error: "Reminder date and time are required"
+      });
+    }
+
+    const reminder = await Reminder.create({
+      title: title.trim(),
+      remindAt
+    });
+
+    res.status(201).json({
+      message: "Reminder created successfully",
+      reminder
+    });
+  } catch (error) {
+    if (
+      error.name === "ValidationError" ||
+      error.name === "CastError"
+    ) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    console.error("Failed to create reminder:", error.message);
+
+    res.status(500).json({
+      error: "Failed to create reminder"
+    });
+  }
+});
+
+
+
+app.get("/api/reminders", async (req, res) => {
+  try {
+    const reminders = await Reminder.find().sort({
+      remindAt: 1
+    });
+
+    res.status(200).json({
+      count: reminders.length,
+      reminders
+    });
+  } catch (error) {
+    console.error("Failed to fetch reminders:", error.message);
+
+    res.status(500).json({
+      error: "Failed to fetch reminders"
+    });
+  }
+});
+
+
+
+app.patch("/api/reminders/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid reminder ID"
+      });
+    }
+
+    const allowedFields = ["title", "remindAt", "completed"];
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (req.body && req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: "Provide at least one valid field to update"
+      });
+    }
+
+    if (
+      updates.title !== undefined &&
+      (typeof updates.title !== "string" || !updates.title.trim())
+    ) {
+      return res.status(400).json({
+        error: "Reminder title must be a non-empty string"
+      });
+    }
+
+    if (
+      updates.completed !== undefined &&
+      typeof updates.completed !== "boolean"
+    ) {
+      return res.status(400).json({
+        error: "Completed must be true or false"
+      });
+    }
+
+    if (typeof updates.title === "string") {
+      updates.title = updates.title.trim();
+    }
+
+    const reminder = await Reminder.findByIdAndUpdate(
+      id,
+      updates,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!reminder) {
+      return res.status(404).json({
+        error: "Reminder not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Reminder updated successfully",
+      reminder
+    });
+  } catch (error) {
+    if (
+      error.name === "ValidationError" ||
+      error.name === "CastError"
+    ) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    console.error("Failed to update reminder:", error.message);
+
+    res.status(500).json({
+      error: "Failed to update reminder"
+    });
+  }
+});
+
+
+app.delete("/api/reminders/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid reminder ID"
+      });
+    }
+
+    const reminder = await Reminder.findByIdAndDelete(id);
+
+    if (!reminder) {
+      return res.status(404).json({
+        error: "Reminder not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Reminder deleted successfully",
+      reminder
+    });
+  } catch (error) {
+    console.error("Failed to delete reminder:", error.message);
+
+    res.status(500).json({
+      error: "Failed to delete reminder"
+    });
+  }
+});
+
 
 
 
