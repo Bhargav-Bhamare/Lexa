@@ -8,9 +8,6 @@ const Task = require("./models/Task");
 const app = express();
 app.use(express.json());
 
-let tasks = [];
-let nextId = 1;
-
 
 const port = 3000;
 
@@ -23,6 +20,25 @@ app.get("/api/health",(req,res) =>{
         "app": "Lexa"
     });
 });
+
+
+app.get("/api/tasks", async (req, res) => {
+  try {
+    const tasks = await Task.find().sort({ createdAt: -1 });
+
+    res.status(200).json({
+      count: tasks.length,
+      tasks
+    });
+  } catch (error) {
+    console.error("Failed to fetch tasks:", error.message);
+
+    res.status(500).json({
+      error: "Failed to fetch tasks"
+    });
+  }
+});
+
 
 
 app.post("/api/tasks", async (req, res) => {
