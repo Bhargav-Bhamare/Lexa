@@ -113,6 +113,108 @@ app.post("/api/tasks", async (req, res) => {
 });
 
 
+app.patch("/api/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid task ID"
+      });
+    }
+
+    const allowedFields = [
+      "title",
+      "description",
+      "dueAt",
+      "priority",
+      "status"
+    ];
+
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (req.body && req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        error: "Provide at least one valid field to update"
+      });
+    }
+
+    const task = await Task.findByIdAndUpdate(
+      id,
+      updates,
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!task) {
+      return res.status(404).json({
+        error: "Task not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Task updated successfully",
+      task
+    });
+  } catch (error) {
+    if (
+      error.name === "ValidationError" ||
+      error.name === "CastError"
+    ) {
+      return res.status(400).json({
+        error: error.message
+      });
+    }
+
+    console.error("Failed to update task:", error.message);
+
+    res.status(500).json({
+      error: "Failed to update task"
+    });
+  }
+});
+
+
+app.delete("/api/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid task ID"
+      });
+    }
+
+    const task = await Task.findByIdAndDelete(id);
+
+    if (!task) {
+      return res.status(404).json({
+        error: "Task not found"
+      });
+    }
+
+    res.status(200).json({
+      message: "Task deleted successfully",
+      task
+    });
+  } catch (error) {
+    console.error("Failed to delete task:", error.message);
+
+    res.status(500).json({
+      error: "Failed to delete task"
+    });
+  }
+});
+
+
 
 
 
