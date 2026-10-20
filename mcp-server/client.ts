@@ -25,6 +25,27 @@ async function main() {
       console.log("  Input schema:", JSON.stringify(tool.inputSchema));
     }
 
+    const created = await client.callTool({
+        name: "create_task",
+        arguments: {
+            title: "Test MCP task creation",
+            description: "Created through the Lexa MCP client",
+            priority: "high",
+            status: "pending",
+        },
+    });
+
+    console.log("\ncreate_task result:");
+    console.log(JSON.stringify(created, null, 2));
+
+    const tasks = await client.callTool({
+    name: "list_tasks",
+    arguments: {},
+    });
+
+    console.log("\nlist_tasks after creation:");
+    console.log(JSON.stringify(tasks, null, 2));
+
     // Invoke the real HomeFlow tool.
     const result = await client.callTool({
       name: "list_tasks",

@@ -1,11 +1,11 @@
 
-import express, { type Request, type Response } from "express";
+import express,{type Request, type Response } from "express";
 import dotenv from "dotenv";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {createRequire} from "node:module";
 import {randomUUID } from "node:crypto";
-
+import { z } from "zod";
 import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StreamableHTTPServerTransport} from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
@@ -23,8 +23,17 @@ const backendRequire = createRequire(
 );
 
 const mongoose = backendRequire("mongoose");
-const { listTasks } = backendRequire("./services/taskService") as {
+const { listTasks, createTask } = backendRequire(
+  "./services/taskService"
+) as {
   listTasks: () => Promise<unknown[]>;
+  createTask: (taskData: {
+    title: string;
+    description?: string;
+    dueAt?: string | null;
+    priority?: "low" | "medium" | "high";
+    status?: "pending" | "in_progress" | "completed";
+  }) => Promise<unknown>;
 };
 
 const app = express();
@@ -37,13 +46,13 @@ type McpSession = {
 
 const sessions = new Map<string, McpSession>();
 
-function createMcpSession(): McpSession {
+function createMcpSession(): McpSession{
   const server = new McpServer({
-    name: "homeflow-mcp",
+    name: "lexa-mcp",
     version: "1.0.0",
   });
 
-  // Register our first real HomeFlow tool.
+  // Register our first real Lexa tool.
   server.registerTool(
     "list_tasks",
     {
@@ -55,7 +64,7 @@ function createMcpSession(): McpSession {
       try {
         const tasks = await listTasks();
 
-        return {
+        return{
           content: [
             {
               type: "text",
@@ -63,7 +72,7 @@ function createMcpSession(): McpSession {
             },
           ],
         };
-      } catch (error) {
+      }catch (error) {
         console.error("list_tasks failed:", error);
 
         return {
@@ -78,6 +87,61 @@ function createMcpSession(): McpSession {
       }
     }
   );
+
+  
+  server.registerTool(
+    "create_task",
+    {
+      title: "Create a HomeFlow task",
+      description:
+        "Create and save a task in HomeFlow. Provide a title and optionally a description, due date, priority, and status.",
+      inputSchema: {
+        title: z.string().trim().min(1).max(150),
+        description: z.string().max(1000).optional(),
+        dueAt: z.string().datetime().nullable().optional(),
+        priority: z.enum(["low", "medium", "high"]).optional(),
+        status: z
+          .enum(["pending", "in_progress", "completed"])
+          .optional(),
+      },
+    },
+    async ({ title, description, dueAt, priority, status }) => {
+      try {
+        const task = await createTask({
+          title,
+          description,
+          dueAt: dueAt ?? null,
+          priority,
+          status,
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(task, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        console.error("create_task failed:", error);
+
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text:
+                error instanceof Error
+                  ? `Could not create task: ${error.message}`
+                  : "Could not create task.",
+            },
+          ],
+        };
+      }
+    }
+  );
+
 
   let transport!: StreamableHTTPServerTransport;
 
