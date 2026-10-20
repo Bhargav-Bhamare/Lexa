@@ -2,12 +2,12 @@
 import express, { type Request, type Response } from "express";
 import dotenv from "dotenv";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
-import { randomUUID } from "node:crypto";
+import {fileURLToPath} from "node:url";
+import {createRequire} from "node:module";
+import {randomUUID } from "node:crypto";
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
+import {StreamableHTTPServerTransport} from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,8 +47,8 @@ function createMcpSession(): McpSession {
   server.registerTool(
     "list_tasks",
     {
-      title: "List HomeFlow tasks",
-      description: "Retrieve all tasks saved in HomeFlow, newest first.",
+      title: "List Lexa tasks",
+      description: "Retrieve all tasks saved in Lexa, newest first.",
       inputSchema: {},
     },
     async () => {
@@ -71,7 +71,7 @@ function createMcpSession(): McpSession {
           content: [
             {
               type: "text",
-              text: "Failed to retrieve HomeFlow tasks. Check the server logs.",
+              text: "Failed to retrieve Lexa tasks. Check the server logs.",
             },
           ],
         };
@@ -176,14 +176,14 @@ async function main() {
   }
 
   await mongoose.connect(uri);
-  console.log("HomeFlow MongoDB connection established");
+  console.log("Lexa MongoDB connection established");
 
   app.listen(3001, () => {
-    console.log("HomeFlow MCP server listening on http://localhost:3001/mcp");
+    console.log("Lexa MCP server listening on http://localhost:3001/mcp");
   });
 }
 
 main().catch((error) => {
-  console.error("Failed to start HomeFlow MCP server:", error);
+  console.error("Failed to start Lexa MCP server:", error);
   process.exit(1);
 });
