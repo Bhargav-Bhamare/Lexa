@@ -38,6 +38,8 @@ async function main() {
     console.log("\ncreate_task result:");
     console.log(JSON.stringify(created, null, 2));
 
+
+    // Invoke the task listing tool to verify that the task was created.
     const tasks = await client.callTool({
     name: "list_tasks",
     arguments: {},
@@ -46,7 +48,21 @@ async function main() {
     console.log("\nlist_tasks after creation:");
     console.log(JSON.stringify(tasks, null, 2));
 
-    // Invoke the real HomeFlow tool.
+    //Calling Update tool
+    const updated = await client.callTool({
+      name: "update_task",
+      arguments: {
+        taskId: "6ad72895c0b0bc25c051b5b8",
+        priority: "medium",
+        status: "in_progress",
+      },
+    });
+
+    console.log("\nupdate_task result:");
+    console.log(JSON.stringify(updated, null, 2));
+
+
+    // Invoke the real Lexa tool.
     const result = await client.callTool({
       name: "list_tasks",
       arguments: {},

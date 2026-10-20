@@ -23,7 +23,8 @@ const backendRequire = createRequire(
 );
 
 const mongoose = backendRequire("mongoose");
-const { listTasks, createTask } = backendRequire(
+
+const { listTasks, createTask, updateTask } = backendRequire(
   "./services/taskService"
 ) as {
   listTasks: () => Promise<unknown[]>;
@@ -34,6 +35,10 @@ const { listTasks, createTask } = backendRequire(
     priority?: "low" | "medium" | "high";
     status?: "pending" | "in_progress" | "completed";
   }) => Promise<unknown>;
+  updateTask: (
+    taskId: string,
+    updates: Record<string, unknown>
+  ) => Promise<unknown | null>;
 };
 
 const app = express();
@@ -141,6 +146,85 @@ function createMcpSession(): McpSession{
       }
     }
   );
+
+  
+server.registerTool(
+  "update_task",
+  {
+    title: "Update a Lexa task",
+    description:
+      "Update selected fields of an existing Lexa task using its MongoDB task ID.",
+    inputSchema: {
+      taskId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid task ID"),
+      title: z.string().trim().min(1).max(150).optional(),
+      description: z.string().max(1000).optional(),
+      dueAt: z.string().datetime().nullable().optional(),
+      priority: z.enum(["low", "medium", "high"]).optional(),
+      status: z
+        .enum(["pending", "in_progress", "completed"])
+        .optional(),
+    },
+  },
+  async ({ taskId, title, description, dueAt, priority, status }) => {
+    try {
+      const updates: Record<string, unknown> = {};
+
+      if (title !== undefined) updates.title = title;
+      if (description !== undefined) updates.description = description;
+      if (dueAt !== undefined) updates.dueAt = dueAt;
+      if (priority !== undefined) updates.priority = priority;
+      if (status !== undefined) updates.status = status;
+
+      if (Object.keys(updates).length === 0) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Provide at least one field to update.",
+            },
+          ],
+        };
+      }
+
+      const updatedTask = await updateTask(taskId, updates);
+
+      if (!updatedTask) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Task not found.",
+            },
+          ],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(updatedTask, null, 2),
+          },
+        ],
+      };
+      }catch(error) {
+        console.error("update_task failed:", error);
+
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: "Could not update task. Check the input and server logs.",
+            },
+          ],
+        };
+        }
+        }
+      );
+
 
 
   let transport!: StreamableHTTPServerTransport;
