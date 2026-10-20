@@ -20,8 +20,13 @@ async function updateTask(taskId, updates) {
   );
 }
 
+async function deleteTask(taskId) {
+  return await Task.findByIdAndDelete(taskId);
+}
+
 module.exports = {
   listTasks,
   createTask,
   updateTask,
+  deleteTask,
 };

@@ -24,7 +24,7 @@ const backendRequire = createRequire(
 
 const mongoose = backendRequire("mongoose");
 
-const { listTasks, createTask, updateTask } = backendRequire(
+const { listTasks, createTask, updateTask, deleteTask } = backendRequire(
   "./services/taskService"
 ) as {
   listTasks: () => Promise<unknown[]>;
@@ -39,6 +39,7 @@ const { listTasks, createTask, updateTask } = backendRequire(
     taskId: string,
     updates: Record<string, unknown>
   ) => Promise<unknown | null>;
+  deleteTask: (taskId: string) => Promise<unknown | null>;
 };
 
 const app = express();
@@ -222,6 +223,51 @@ server.registerTool(
           ],
         };
         }
+        }
+      );
+
+      server.registerTool(
+  "delete_task",
+  {
+    title: "Delete a Lexa task",
+    description:
+      "Delete an existing Lexa task using its MongoDB task ID.",
+    inputSchema: {
+      taskId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid task ID"),
+    },
+  },
+  async ({ taskId }) => {
+    try {
+      const deletedTask = await deleteTask(taskId);
+
+      if (!deletedTask) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "Task not found." }],
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(deletedTask, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      console.error("delete_task failed:", error);
+
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: "Could not delete task. Check the server logs.",
+              },
+              ],
+            };
+          }
         }
       );
 

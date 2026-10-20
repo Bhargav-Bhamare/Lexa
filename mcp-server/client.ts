@@ -61,6 +61,16 @@ async function main() {
     console.log("\nupdate_task result:");
     console.log(JSON.stringify(updated, null, 2));
 
+    //Deleting Tool
+    const deleted = await client.callTool({
+      name: "delete_task",
+      arguments: {
+        taskId: "6ad72895c0b0bc25c051b5b8",
+      },
+    });
+
+    console.log("\ndelete_task result:");
+    console.log(JSON.stringify(deleted, null, 2));
 
     // Invoke the real Lexa tool.
     const result = await client.callTool({
