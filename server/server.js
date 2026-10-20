@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 const Task = require("./models/Task");
 const ShoppingItem = require("./models/ShoppingItem");
 const Reminder = require("./models/Reminder");
-
+const { listTasks } = require("./services/taskService");
 
 const app = express();
 app.use(express.json());
@@ -23,10 +23,11 @@ app.get("/api/health",(req,res) =>{
     });
 });
 
+//Tasks API list
 
 app.get("/api/tasks", async (req, res) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 });
+    const tasks = await listTasks();
 
     res.status(200).json({
       count: tasks.length,
