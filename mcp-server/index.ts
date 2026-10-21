@@ -325,6 +325,50 @@ function createMcpSession(): McpSession{
             }
           );
 
+          
+          server.registerTool(
+            "add_shopping_item",
+            {
+              title: "Add a Lexa shopping item",
+              description:
+                "Add an item to Lexa's shopping list with an optional quantity.",
+              inputSchema: {
+                name: z.string().trim().min(1).max(100),
+                quantity: z.number().int().min(1).optional(),
+              },
+            },
+            async ({ name, quantity }) => {
+              try {
+                const item = await createShoppingItem({
+                  name,
+                  quantity,
+                });
+
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(item, null, 2),
+                    },
+                  ],
+                };
+              } catch (error) {
+                console.error("add_shopping_item failed:", error);
+
+                return {
+                  isError: true,
+                  content: [
+                    {
+                      type: "text",
+                      text: "Could not add shopping item. Check the server logs.",
+                    },
+                  ],
+                };
+              }
+            }
+          );
+
+
 
 
 

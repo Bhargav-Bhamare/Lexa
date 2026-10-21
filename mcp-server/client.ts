@@ -48,7 +48,16 @@ async function main() {
     console.log("\nlist_tasks after creation:");
     console.log(JSON.stringify(tasks, null, 2));
 
+    //Add item 
+    const addedItem = await client.callTool({
+      name: "add_shopping_item",
+      arguments: {
+        name: "Milk",
+        quantity: 2,
+      },
+    });
     
+    //Shopping item listing tool
     const shoppingItems = await client.callTool({
       name: "list_shopping_items",
       arguments: {},
@@ -56,7 +65,10 @@ async function main() {
 
     console.log("\nlist_shopping_items result:");
     console.log(JSON.stringify(shoppingItems, null, 2));
+    
 
+    console.log("\nadd_shopping_item result:");
+    console.log(JSON.stringify(addedItem, null, 2));
 
     //Calling Update tool
     // const updated = await client.callTool({
