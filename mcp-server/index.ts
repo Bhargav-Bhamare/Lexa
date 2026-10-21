@@ -44,17 +44,29 @@ const { listTasks, createTask, updateTask, deleteTask } = backendRequire(
 };
 
 //Import ShoppingItem Service
+  const {
+    listShoppingItems,
+    createShoppingItem,
+    updateShoppingItem,
+    deleteShoppingItem,
+  } = backendRequire("./services/shoppingItemService") as {
+    listShoppingItems: () => Promise<unknown[]>;
+    createShoppingItem: (itemData: {
+      name: string;
+      quantity?: number;
+      purchased?: boolean;
+    }) => Promise<unknown>;
+    updateShoppingItem: (
+      itemId: string,
+      updates: {
+        name?: string;
+        quantity?: number;
+        purchased?: boolean;
+      }
+    ) => Promise<unknown>;
+    deleteShoppingItem: (itemId: string) => Promise<unknown>;
+  };
 
-const { listShoppingItems, createShoppingItem } = backendRequire(
-  "./services/shoppingItemService"
-) as {
-  listShoppingItems: () => Promise<unknown[]>;
-  createShoppingItem: (itemData: {
-    name: string;
-    quantity?: number;
-    purchased?: boolean;
-  }) => Promise<unknown>;
-};
 
 
 
@@ -367,6 +379,133 @@ function createMcpSession(): McpSession{
               }
             }
           );
+
+          
+          server.registerTool(
+            "update_shopping_item",
+            {
+              title: "Update a Lexa shopping item",
+              description:
+                "Update the name, quantity, or purchased status of an existing shopping item using its MongoDB ID.",
+              inputSchema: {
+                itemId: z.string().regex(/^[a-fA-F0-9]{24}$/),
+                name: z.string().trim().min(1).max(100).optional(),
+                quantity: z.number().int().min(1).optional(),
+                purchased: z.boolean().optional(),
+              },
+            },
+            async ({ itemId, name, quantity, purchased }) => {
+              try {
+                const updates: {
+                  name?: string;
+                  quantity?: number;
+                  purchased?: boolean;
+                } = {};
+
+                if (name !== undefined) updates.name = name;
+                if (quantity !== undefined) updates.quantity = quantity;
+                if (purchased !== undefined) updates.purchased = purchased;
+
+                if (Object.keys(updates).length === 0) {
+                  return {
+                    isError: true,
+                    content: [
+                      {
+                        type: "text",
+                        text: "Provide at least one field to update.",
+                      },
+                    ],
+                  };
+                }
+
+                const item = await updateShoppingItem(itemId, updates);
+
+                if (!item) {
+                  return {
+                    isError: true,
+                    content: [
+                      {
+                        type: "text",
+                        text: "Shopping item not found.",
+                      },
+                    ],
+                  };
+                }
+
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(item, null, 2),
+                    },
+                  ],
+                };
+              } catch (error) {
+                console.error("update_shopping_item failed:", error);
+                return {
+                  isError: true,
+                  content: [
+                    {
+                      type: "text",
+                      text: "Could not update shopping item. Check the server logs.",
+                    },
+                  ],
+                };
+              }
+            }
+          );
+
+          
+          server.registerTool(
+            "delete_shopping_item",
+            {
+              title: "Delete a Lexa shopping item",
+              description:
+                "Delete an existing shopping item using its MongoDB ID.",
+              inputSchema: {
+                itemId: z.string().regex(/^[a-fA-F0-9]{24}$/),
+              },
+            },
+            async ({ itemId }) => {
+              try {
+                const item = await deleteShoppingItem(itemId);
+
+                if (!item) {
+                  return {
+                    isError: true,
+                    content: [
+                      {
+                        type: "text",
+                        text: "Shopping item not found.",
+                      },
+                    ],
+                  };
+                }
+
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: `Shopping item deleted successfully.`,
+                    },
+                  ],
+                };
+              } catch (error) {
+                console.error("delete_shopping_item failed:", error);
+                return {
+                  isError: true,
+                  content: [
+                    {
+                      type: "text",
+                      text: "Could not delete shopping item. Check the server logs.",
+                    },
+                  ],
+                };
+              }
+            }
+          );
+
+
 
 
 

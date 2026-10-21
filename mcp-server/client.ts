@@ -49,14 +49,17 @@ async function main() {
     console.log(JSON.stringify(tasks, null, 2));
 
     //Add item 
-    const addedItem = await client.callTool({
-      name: "add_shopping_item",
-      arguments: {
-        name: "Milk",
-        quantity: 2,
-      },
-    });
-    
+    // const addedItem = await client.callTool({
+    //   name: "add_shopping_item",
+    //   arguments: {
+    //     name: "Milk",
+    //     quantity: 2,
+    //   },
+    // });
+
+    //console.log("\nadd_shopping_item result:");
+    // console.log(JSON.stringify(addedItem, null, 2));
+
     //Shopping item listing tool
     const shoppingItems = await client.callTool({
       name: "list_shopping_items",
@@ -65,10 +68,42 @@ async function main() {
 
     console.log("\nlist_shopping_items result:");
     console.log(JSON.stringify(shoppingItems, null, 2));
-    
 
-    console.log("\nadd_shopping_item result:");
-    console.log(JSON.stringify(addedItem, null, 2));
+    //Update Shopping item:
+    
+    // const updatedItem = await client.callTool({
+    //   name: "update_shopping_item",
+    //   arguments: {
+    //     itemId: "6ad8388ebe6b94b8cc02431a",
+    //     quantity: 3,
+    //     purchased: true,
+    //   },
+    // });
+
+    // console.log("\nupdate_shopping_item result:");
+    // console.log(JSON.stringify(updatedItem, null, 2));
+    
+    // const deletedItem = await client.callTool({
+    //   name: "delete_shopping_item",
+    //   arguments: {
+    //     itemId: "6ad83ab40cbe5635c7e46652",
+    //   },
+    // });
+
+    // console.log("\ndelete_shopping_item result:");
+    // console.log(JSON.stringify(deletedItem, null, 2));
+
+    
+    const finalShoppingList = await client.callTool({
+      name: "list_shopping_items",
+      arguments: {},
+    });
+
+    console.log("\nShopping list after deletion:");
+    console.log(JSON.stringify(finalShoppingList, null, 2));
+
+    
+    
 
     //Calling Update tool
     // const updated = await client.callTool({
