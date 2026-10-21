@@ -24,6 +24,7 @@ const backendRequire = createRequire(
 
 const mongoose = backendRequire("mongoose");
 
+//Import Task Service
 const { listTasks, createTask, updateTask, deleteTask } = backendRequire(
   "./services/taskService"
 ) as {
@@ -41,6 +42,21 @@ const { listTasks, createTask, updateTask, deleteTask } = backendRequire(
   ) => Promise<unknown | null>;
   deleteTask: (taskId: string) => Promise<unknown | null>;
 };
+
+//Import ShoppingItem Service
+
+const { listShoppingItems, createShoppingItem } = backendRequire(
+  "./services/shoppingItemService"
+) as {
+  listShoppingItems: () => Promise<unknown[]>;
+  createShoppingItem: (itemData: {
+    name: string;
+    quantity?: number;
+    purchased?: boolean;
+  }) => Promise<unknown>;
+};
+
+
 
 const app = express();
 app.use(express.json());
@@ -149,44 +165,44 @@ function createMcpSession(): McpSession{
   );
 
   
-server.registerTool(
-  "update_task",
-  {
-    title: "Update a Lexa task",
-    description:
-      "Update selected fields of an existing Lexa task using its MongoDB task ID.",
-    inputSchema: {
-      taskId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid task ID"),
-      title: z.string().trim().min(1).max(150).optional(),
-      description: z.string().max(1000).optional(),
-      dueAt: z.string().datetime().nullable().optional(),
-      priority: z.enum(["low", "medium", "high"]).optional(),
-      status: z
-        .enum(["pending", "in_progress", "completed"])
-        .optional(),
-    },
-  },
-  async ({ taskId, title, description, dueAt, priority, status }) => {
-    try {
-      const updates: Record<string, unknown> = {};
+      server.registerTool(
+        "update_task",
+        {
+          title: "Update a Lexa task",
+          description:
+            "Update selected fields of an existing Lexa task using its MongoDB task ID.",
+          inputSchema: {
+            taskId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid task ID"),
+            title: z.string().trim().min(1).max(150).optional(),
+            description: z.string().max(1000).optional(),
+            dueAt: z.string().datetime().nullable().optional(),
+            priority: z.enum(["low", "medium", "high"]).optional(),
+            status: z
+              .enum(["pending", "in_progress", "completed"])
+              .optional(),
+          },
+        },
+        async ({ taskId, title, description, dueAt, priority, status }) => {
+          try {
+            const updates: Record<string, unknown> = {};
 
-      if (title !== undefined) updates.title = title;
-      if (description !== undefined) updates.description = description;
-      if (dueAt !== undefined) updates.dueAt = dueAt;
-      if (priority !== undefined) updates.priority = priority;
-      if (status !== undefined) updates.status = status;
+            if (title !== undefined) updates.title = title;
+            if (description !== undefined) updates.description = description;
+            if (dueAt !== undefined) updates.dueAt = dueAt;
+            if (priority !== undefined) updates.priority = priority;
+            if (status !== undefined) updates.status = status;
 
-      if (Object.keys(updates).length === 0) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: "Provide at least one field to update.",
-            },
-          ],
-        };
-      }
+            if (Object.keys(updates).length === 0) {
+              return {
+                isError: true,
+                content: [
+                  {
+                    type: "text",
+                    text: "Provide at least one field to update.",
+                  },
+                ],
+              };
+            }
 
       const updatedTask = await updateTask(taskId, updates);
 
@@ -226,50 +242,89 @@ server.registerTool(
         }
       );
 
+          
       server.registerTool(
-  "delete_task",
-  {
-    title: "Delete a Lexa task",
-    description:
-      "Delete an existing Lexa task using its MongoDB task ID.",
-    inputSchema: {
-      taskId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid task ID"),
-    },
-  },
-  async ({ taskId }) => {
-    try {
-      const deletedTask = await deleteTask(taskId);
+      "delete_task",
+      {
+        title: "Delete a Lexa task",
+        description:
+          "Delete an existing Lexa task using its MongoDB task ID.",
+        inputSchema: {
+          taskId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid task ID"),
+        },
+      },
+      async ({ taskId }) => {
+        try {
+          const deletedTask = await deleteTask(taskId);
 
-      if (!deletedTask) {
-        return {
-          isError: true,
-          content: [{ type: "text", text: "Task not found." }],
-        };
-      }
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(deletedTask, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      console.error("delete_task failed:", error);
-
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: "Could not delete task. Check the server logs.",
-              },
-              ],
+          if (!deletedTask) {
+            return {
+              isError: true,
+              content: [{ type: "text", text: "Task not found." }],
             };
           }
-        }
-      );
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(deletedTask, null, 2),
+              },
+            ],
+          };
+        } catch (error) {
+          console.error("delete_task failed:", error);
+
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: "Could not delete task. Check the server logs.",
+                  },
+                  ],
+                };
+              }
+            }
+          );
+
+          
+          server.registerTool(
+            "list_shopping_items",
+            {
+              title: "List Lexa shopping items",
+              description:
+                "Retrieve all shopping items saved in Lexa, newest first.",
+              inputSchema: {},
+            },
+            async () => {
+              try {
+                const items = await listShoppingItems();
+
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(items, null, 2),
+                    },
+                  ],
+                };
+              } catch (error) {
+                console.error("list_shopping_items failed:", error);
+
+                return {
+                  isError: true,
+                  content: [
+                    {
+                      type: "text",
+                      text: "Could not retrieve shopping items. Check the server logs.",
+                    },
+                  ],
+                };
+              }
+            }
+          );
+
 
 
 

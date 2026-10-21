@@ -25,18 +25,18 @@ async function main() {
       console.log("  Input schema:", JSON.stringify(tool.inputSchema));
     }
 
-    const created = await client.callTool({
-        name: "create_task",
-        arguments: {
-            title: "Test MCP task creation",
-            description: "Created through the Lexa MCP client",
-            priority: "high",
-            status: "pending",
-        },
-    });
+    // const created = await client.callTool({
+    //     name: "create_task",
+    //     arguments: {
+    //         title: "Test MCP task creation",
+    //         description: "Created through the Lexa MCP client",
+    //         priority: "high",
+    //         status: "pending",
+    //     },
+    // });
 
-    console.log("\ncreate_task result:");
-    console.log(JSON.stringify(created, null, 2));
+    // console.log("\ncreate_task result:");
+    // console.log(JSON.stringify(created, null, 2));
 
 
     // Invoke the task listing tool to verify that the task was created.
@@ -48,29 +48,39 @@ async function main() {
     console.log("\nlist_tasks after creation:");
     console.log(JSON.stringify(tasks, null, 2));
 
-    //Calling Update tool
-    const updated = await client.callTool({
-      name: "update_task",
-      arguments: {
-        taskId: "6ad72895c0b0bc25c051b5b8",
-        priority: "medium",
-        status: "in_progress",
-      },
+    
+    const shoppingItems = await client.callTool({
+      name: "list_shopping_items",
+      arguments: {},
     });
 
-    console.log("\nupdate_task result:");
-    console.log(JSON.stringify(updated, null, 2));
+    console.log("\nlist_shopping_items result:");
+    console.log(JSON.stringify(shoppingItems, null, 2));
+
+
+    //Calling Update tool
+    // const updated = await client.callTool({
+    //   name: "update_task",
+    //   arguments: {
+    //     taskId: "6ad72895c0b0bc25c051b5b8",
+    //     priority: "medium",
+    //     status: "in_progress",
+    //   },
+    // });
+
+    // console.log("\nupdate_task result:");
+    // console.log(JSON.stringify(updated, null, 2));
 
     //Deleting Tool
-    const deleted = await client.callTool({
-      name: "delete_task",
-      arguments: {
-        taskId: "6ad72895c0b0bc25c051b5b8",
-      },
-    });
+    // const deleted = await client.callTool({
+    //   name: "delete_task",
+    //   arguments: {
+    //     taskId: "6ad72895c0b0bc25c051b5b8",
+    //   },
+    // });
 
-    console.log("\ndelete_task result:");
-    console.log(JSON.stringify(deleted, null, 2));
+    // console.log("\ndelete_task result:");
+    // console.log(JSON.stringify(deleted, null, 2));
 
     // Invoke the real Lexa tool.
     const result = await client.callTool({
