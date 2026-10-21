@@ -67,7 +67,29 @@ const { listTasks, createTask, updateTask, deleteTask } = backendRequire(
     deleteShoppingItem: (itemId: string) => Promise<unknown>;
   };
 
-
+  //Import Reminder Service
+  const {
+  listReminders,
+  createReminder,
+  updateReminder,
+  deleteReminder,
+  } = backendRequire("./services/reminderService") as {
+    listReminders: () => Promise<unknown[]>;
+    createReminder: (reminderData: {
+      title: string;
+      remindAt: string | Date;
+      completed?: boolean;
+    }) => Promise<unknown>;
+    updateReminder: (
+      reminderId: string,
+      updates: {
+        title?: string;
+        remindAt?: string | Date;
+        completed?: boolean;
+      }
+    ) => Promise<unknown>;
+    deleteReminder: (reminderId: string) => Promise<unknown>;
+  };
 
 
 const app = express();
@@ -505,6 +527,216 @@ function createMcpSession(): McpSession{
             }
           );
 
+          
+      // 1. List reminders
+      server.registerTool(
+        "list_reminders",
+        {
+          title: "List Lexa reminders",
+          description:
+            "Retrieve all reminders saved in Lexa, ordered by reminder date and time.",
+          inputSchema: {},
+        },
+        async () => {
+          try {
+            const reminders = await listReminders();
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(reminders, null, 2),
+                },
+              ],
+            };
+          } catch (error) {
+            console.error("list_reminders failed:", error);
+
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: "Could not retrieve reminders. Check the server logs.",
+                },
+              ],
+            };
+          }
+        }
+      );
+
+      // 2. Create a reminder
+      server.registerTool(
+        "create_reminder",
+        {
+          title: "Create a Lexa reminder",
+          description:
+            "Create a reminder with a title and reminder date/time. Provide the date/time as an ISO 8601 string ending in Z, for example 2026-10-22T09:00:00.000Z.",
+          inputSchema: {
+            title: z.string().trim().min(1).max(150),
+            remindAt: z.string().datetime(),
+          },
+        },
+        async ({ title, remindAt }) => {
+          try {
+            const reminder = await createReminder({
+              title,
+              remindAt: new Date(remindAt),
+            });
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(reminder, null, 2),
+                },
+              ],
+            };
+          } catch (error) {
+            console.error("create_reminder failed:", error);
+
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text:
+                    error instanceof Error
+                      ? `Could not create reminder: ${error.message}`
+                      : "Could not create reminder.",
+                },
+              ],
+            };
+          }
+        }
+      );
+
+      // 3. Update a reminder
+      server.registerTool(
+        "update_reminder",
+        {
+          title: "Update a Lexa reminder",
+          description:
+            "Update the title, reminder date/time, or completed status of an existing reminder using its MongoDB ID.",
+          inputSchema: {
+            reminderId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid reminder ID"),
+            title: z.string().trim().min(1).max(150).optional(),
+            remindAt: z.string().datetime().optional(),
+            completed: z.boolean().optional(),
+          },
+        },
+        async ({ reminderId, title, remindAt, completed }) => {
+          try {
+            const updates: {
+              title?: string;
+              remindAt?: Date;
+              completed?: boolean;
+            } = {};
+
+            if (title !== undefined) updates.title = title;
+            if (remindAt !== undefined) updates.remindAt = new Date(remindAt);
+            if (completed !== undefined) updates.completed = completed;
+
+            if (Object.keys(updates).length === 0) {
+              return {
+                isError: true,
+                content: [
+                  {
+                    type: "text",
+                    text: "Provide at least one field to update.",
+                  },
+                ],
+              };
+            }
+
+            const reminder = await updateReminder(reminderId, updates);
+
+            if (!reminder) {
+              return {
+                isError: true,
+                content: [
+                  {
+                    type: "text",
+                    text: "Reminder not found.",
+                  },
+                ],
+              };
+            }
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(reminder, null, 2),
+                },
+              ],
+            };
+          } catch (error) {
+            console.error("update_reminder failed:", error);
+
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: "Could not update reminder. Check the input and server logs.",
+                },
+              ],
+            };
+          }
+        }
+      );
+
+      // 4. Delete a reminder
+      server.registerTool(
+        "delete_reminder",
+        {
+          title: "Delete a Lexa reminder",
+          description:
+            "Delete an existing reminder using its MongoDB reminder ID.",
+          inputSchema: {
+            reminderId: z.string().regex(/^[a-fA-F0-9]{24}$/, "Invalid reminder ID"),
+          },
+        },
+        async ({ reminderId }) => {
+          try {
+            const reminder = await deleteReminder(reminderId);
+
+            if (!reminder) {
+              return {
+                isError: true,
+                content: [
+                  {
+                    type: "text",
+                    text: "Reminder not found.",
+                  },
+                ],
+              };
+            }
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: "Reminder deleted successfully.",
+                },
+              ],
+            };
+          } catch (error) {
+            console.error("delete_reminder failed:", error);
+
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: "Could not delete reminder. Check the server logs.",
+                },
+              ],
+            };
+          }
+        }
+      );
 
 
 

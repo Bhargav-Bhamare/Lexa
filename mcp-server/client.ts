@@ -128,15 +128,23 @@ async function main() {
 
     // console.log("\ndelete_task result:");
     // console.log(JSON.stringify(deleted, null, 2));
-
+    
     // Invoke the real Lexa tool.
-    const result = await client.callTool({
-      name: "list_tasks",
-      arguments: {},
-    });
+    // const result = await client.callTool({
+    //   name: "list_tasks",
+    //   arguments: {},
+    // });
 
-    console.log("\nlist_tasks result:");
-    console.log(JSON.stringify(result, null, 2));
+    // console.log("\nlist_tasks result:");
+    // console.log(JSON.stringify(result, null, 2));
+        // Test Reminder listing
+        const result = await client.callTool({
+  name: "list_reminders",
+  arguments: {},
+});
+
+console.log("\nReminders after deletion:");
+console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     console.error("MCP client test failed:", error);
     process.exitCode = 1;
