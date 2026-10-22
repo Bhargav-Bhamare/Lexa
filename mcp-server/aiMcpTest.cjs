@@ -64,8 +64,18 @@ async function main() {
     }
 
     const data = await response.json();
-    
-    const toolCall = data.message.tool_calls?.[0];
+
+    if (!data.message || typeof data.message !== "object") {
+      throw new Error("Ollama returned an invalid response.");
+    }
+
+    const toolCalls = data.message.tool_calls;
+
+    if (toolCalls !== undefined && !Array.isArray(toolCalls)) {
+      throw new Error("Ollama returned an invalid tool-call format.");
+    }
+
+    const toolCall = toolCalls?.[0];
 
     if (!toolCall) {
       console.log("AI response:", data.message.content);
@@ -88,6 +98,19 @@ async function main() {
       name: toolName,
       arguments: toolCall.function.arguments,
     });
+
+    if (result.isError) {
+      const errorText = (result.content || [])
+        .filter((item) => item.type === "text")
+        .map((item) => item.text)
+        .join("\n");
+
+      throw new Error(
+        `MCP tool "${toolName}" failed: ${
+          errorText || "Unknown tool error"
+        }`
+      );
+    }
 
 
     
