@@ -34,6 +34,8 @@ async function main() {
       "create_task",
       "add_shopping_item",
       "create_reminder",
+      "update_task",
+      "delete_task",
     ];
 
     const { tools } = await client.listTools();
@@ -55,6 +57,14 @@ async function main() {
       body: JSON.stringify({
         model: "qwen2.5:3b",
         messages: [
+          {
+            role: "system",
+            content: `You are Lexa, a household assistant.
+        For update_task and delete_task, first use list_tasks to find the requested item.
+        Use the exact MongoDB _id as taskId. Never invent IDs.
+        If no unique match exists, ask the user to clarify.
+        Only update the fields requested by the user.`,
+          },
           {
             role: "user",
             content: userRequest,
@@ -99,6 +109,8 @@ async function main() {
       "create_task",
       "add_shopping_item",
       "create_reminder",
+      "update_task",
+      "delete_task",
     ];
 
     
@@ -114,6 +126,31 @@ async function main() {
 
       if (!args || typeof args !== "object" || Array.isArray(args)) {
         throw new Error(`Invalid arguments for ${toolName}`);
+      }
+      if (
+        ["update_task", "delete_task"].includes(toolName) &&
+        (!args.taskId || !/^[a-fA-F0-9]{24}$/.test(args.taskId))
+      ) {
+        const lookup = await client.callTool({
+          name: "list_tasks",
+          arguments: {},
+        });
+
+        const lookupText = (lookup.content || [])
+          .filter((item) => item.type === "text")
+          .map((item) => item.text)
+          .join("\n");
+
+        console.log("\nTask lookup result:");
+        console.log(lookupText);
+
+        console.log(
+          "\nLexa needs the task's exact MongoDB ID before it can update or delete it."
+        );
+
+        throw new Error(
+          "Missing task ID. Use the task lookup result to identify the correct task, then retry."
+        );
       }
 
       const isCreationTool = [
@@ -188,7 +225,29 @@ const finalResponse = await fetch("http://localhost:11434/api/chat", {
       {
         role: "system",
         content:
-          "You are Lexa, a household assistant. Answer using only the supplied tool result. Never invent details or claim actions that were not performed. If a field is null, missing, or unset, clearly say it is not set. Never describe an unset due date as future or overdue. Keep answers concise and factual.",
+          `You are Lexa, a household assistant.
+
+            For update_task:
+            1. If the task ID is unknown, call list_tasks first.
+            2. Find the task matching the user's requested title.
+            3. Use its exact MongoDB _id as taskId.
+            4. Never invent or guess a task ID.
+            5. If multiple tasks match, ask the user to clarify.
+            6. Update only the fields requested by the user.
+
+            For delete_task:
+            1. Find the task using list_tasks if its ID is unknown.
+            2. Use the exact MongoDB _id as taskId.
+            3. Never invent or guess a task ID.
+            4. Require explicit user confirmation before deletion.
+
+            For all responses:
+            - Answer using only actual tool results.
+            - Never claim an action succeeded unless the tool confirms it.
+            - If a field is null, missing, or unset, say it is not set.
+            - Never describe an unset due date as future or overdue.
+            - Keep answers concise and factual.
+            When listing tasks, include each task's exact MongoDB _id and priority. Do not omit IDs.`,
       },
       {
         role: "user",
