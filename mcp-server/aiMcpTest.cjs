@@ -75,12 +75,16 @@ async function main() {
       throw new Error("Ollama returned an invalid tool-call format.");
     }
 
-    const toolCall = toolCalls?.[0];
-
-    if (!toolCall) {
+    
+    if (!toolCalls || toolCalls.length === 0) {
       console.log("AI response:", data.message.content);
       return;
     }
+
+    if (toolCalls.length > 3) {
+      throw new Error("AI requested too many tool calls.");
+    }
+
 
     const allowedTools = [
       "list_tasks",
@@ -88,36 +92,46 @@ async function main() {
       "list_reminders",
     ];
 
-    const toolName = toolCall.function.name;
+    
+    const toolResults = [];
 
-    if (!allowedTools.includes(toolName)) {
-      throw new Error(`AI requested an unsupported tool: ${toolName}`);
-    }
+    for (const toolCall of toolCalls) {
+      const toolName = toolCall.function.name;
 
-    const result = await client.callTool({
-      name: toolName,
-      arguments: toolCall.function.arguments,
-    });
+      if (!allowedTools.includes(toolName)) {
+        throw new Error(`AI requested an unsupported tool: ${toolName}`);
+      }
 
-    if (result.isError) {
-      const errorText = (result.content || [])
+      const result = await client.callTool({
+        name: toolName,
+        arguments: toolCall.function.arguments,
+      });
+
+      if (result.isError) {
+        const errorText = (result.content || [])
+          .filter((item) => item.type === "text")
+          .map((item) => item.text)
+          .join("\n");
+
+        throw new Error(
+          `MCP tool "${toolName}" failed: ${
+            errorText || "Unknown tool error"
+          }`
+        );
+      }
+
+      const toolText = (result.content || [])
         .filter((item) => item.type === "text")
         .map((item) => item.text)
         .join("\n");
 
-      throw new Error(
-        `MCP tool "${toolName}" failed: ${
-          errorText || "Unknown tool error"
-        }`
-      );
+      toolResults.push({
+        toolCall,
+        toolName,
+        toolText,
+      });
     }
 
-
-    
-const toolText = result.content
-  .filter((item) => item.type === "text")
-  .map((item) => item.text)
-  .join("\n");
 
 const finalResponse = await fetch("http://localhost:11434/api/chat", {
   method: "POST",
@@ -128,22 +142,30 @@ const finalResponse = await fetch("http://localhost:11434/api/chat", {
       {
         role: "system",
         content:
-          "You are Lexa, a household assistant. Answer using only the supplied tool result. Never invent tasks or claim actions that were not performed.",
+          "You are Lexa, a household assistant. Answer using only the supplied tool result. Never invent details or claim actions that were not performed. If a field is null, missing, or unset, clearly say it is not set. Never describe an unset due date as future or overdue. Keep answers concise and factual.",
       },
       {
         role: "user",
         content: userRequest,
       },
+      
       {
-        role: "assistant",
-        content: "",
-        tool_calls: [toolCall],
+            role: "assistant",
+            content: "",
+            tool_calls: toolResults.map(({ toolCall, toolName }) => ({
+              ...toolCall,
+              function: {
+                ...toolCall.function,
+                name: toolName,
+              },
+            })),
       },
-      {
-        role: "tool",
-        tool_name: "list_tasks",
-        content: toolText,
-      },
+          ...toolResults.map(({ toolName, toolText }) => ({
+            role: "tool",
+            tool_name: toolName,
+            content: toolText,
+    })),
+
     ],
     stream: false,
   }),
