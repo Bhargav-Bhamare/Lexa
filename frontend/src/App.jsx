@@ -214,22 +214,26 @@ function DataPlaceholder({ icon: Icon, title, description }) {
   );
 }
 
-function MetricCard({ icon: Icon, label, accent }) {
+
+function MetricCard({ icon: Icon, label, accent, value, loading }) {
   return (
     <article className="metric-card">
       <div className="metric-card-top">
         <span className={`metric-icon ${accent}`}>
           <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
         </span>
-        <span className="metric-period">LIVE DATA</span>
+        <span className="metric-period">
+          {loading ? "LOADING" : "LIVE DATA"}
+        </span>
       </div>
-      <p className="metric-value" aria-label="Not connected">—</p>
+      <p className="metric-value">{loading ? "…" : value}</p>
       <p className="metric-label">{label}</p>
     </article>
   );
 }
 
-function Overview({ tasks, shoppingItems, reminders }){
+
+function Overview({ tasks, shoppingItems, reminders, loading }){
   return (
     <>
       <section className="welcome-card">
@@ -256,9 +260,29 @@ function Overview({ tasks, shoppingItems, reminders }){
       </section>
 
       <section className="metrics-grid" aria-label="Household overview">
-        <MetricCard icon={CheckSquare} label="Open tasks" accent="accent-lime" />
-        <MetricCard icon={ShoppingBasket} label="Shopping items" accent="accent-peach" />
-        <MetricCard icon={Bell} label="Upcoming reminders" accent="accent-blue" />
+        
+        <MetricCard
+          icon={CheckSquare}
+          label="Open tasks"
+          accent="accent-lime"
+          value={tasks.filter((task) => task.status !== "completed").length}
+          loading={loading}
+        />
+        <MetricCard
+          icon={ShoppingBasket}
+          label="Shopping items"
+          accent="accent-peach"
+          value={shoppingItems.filter((item) => !item.purchased).length}
+          loading={loading}
+        />
+        <MetricCard
+          icon={Bell}
+          label="Upcoming reminders"
+          accent="accent-blue"
+          value={reminders.filter((reminder) => !reminder.completed).length}
+          loading={loading}
+        />
+
       </section>
 
       <div className="section-heading">
@@ -456,6 +480,7 @@ export default function App() {
                 tasks={tasks}
                 shoppingItems={shoppingItems}
                 reminders={reminders}
+                loading={loading}
               />
             )
           ) : (
