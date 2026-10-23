@@ -425,6 +425,178 @@ function Overview({ tasks, shoppingItems, reminders, loading }){
   );
 }
 
+
+function TasksView({ tasks, onTaskCreated, loading }) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("medium");
+  const [dueAt, setDueAt] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!title.trim()) {
+      setError("Please enter a task title.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          priority,
+          status: "pending",
+          dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Couldn't create the task."
+        );
+      }
+
+      await onTaskCreated();
+      setTitle("");
+      setDescription("");
+      setPriority("medium");
+      setDueAt("");
+      setSuccess("Task created successfully!");
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="panel tasks-page">
+      <div className="tasks-page-heading">
+        <div>
+          <p className="eyebrow">YOUR TO-DO LIST</p>
+          <h2>Tasks</h2>
+          <p className="standalone-description">
+            Keep track of what needs to get done at home.
+          </p>
+        </div>
+        <span className="tasks-count">
+          {tasks.filter((task) => task.status !== "completed").length} open
+        </span>
+      </div>
+
+      <form className="task-form" onSubmit={handleSubmit}>
+        <h3>Add a task</h3>
+
+        <label htmlFor="task-title">Task title</label>
+        <input
+          id="task-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="e.g. Buy groceries"
+          maxLength={150}
+          required
+        />
+
+        <label htmlFor="task-description">Description (optional)</label>
+        <textarea
+          id="task-description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Add a few details..."
+          rows={2}
+          maxLength={1000}
+        />
+
+        <div className="task-form-row">
+          <div>
+            <label htmlFor="task-priority">Priority</label>
+            <select
+              id="task-priority"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value)}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="task-due">Due date (optional)</label>
+            <input
+              id="task-due"
+              type="datetime-local"
+              value={dueAt}
+              onChange={(event) => setDueAt(event.target.value)}
+            />
+          </div>
+        </div>
+
+        {error && <p className="task-form-error" role="alert">{error}</p>}
+        {success && <p className="task-form-success" role="status">{success}</p>}
+
+        <button className="task-submit-button" type="submit" disabled={saving}>
+          {saving ? "Saving..." : "Add task"}
+        </button>
+      </form>
+
+      <div className="tasks-list-heading">
+        <h3>Saved tasks</h3>
+        <span>{tasks.length} total</span>
+      </div>
+
+      {loading ? (
+        <p className="data-placeholder">Loading tasks...</p>
+      ) : tasks.length === 0 ? (
+        <p className="data-placeholder">No tasks yet. Add your first task above.</p>
+      ) : (
+        <div className="tasks-full-list">
+          {tasks.map((task) => (
+            <article className="tasks-full-list-item" key={task._id}>
+              <div className="tasks-full-list-copy">
+                <h4>{task.title}</h4>
+                {task.description && <p>{task.description}</p>}
+                <span className={`task-priority priority-${task.priority || "medium"}`}>
+                  {task.priority || "medium"} priority
+                </span>
+              </div>
+
+              <div className="task-status-area">
+                <span className="task-status">
+                  {(task.status || "pending").replace("_", " ")}
+                </span>
+                {task.dueAt && (
+                  <span className="task-due-date">
+                    {new Intl.DateTimeFormat(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    }).format(new Date(task.dueAt))}
+                  </span>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+
 function ComingSoonView({ view }) {
   const content = comingSoonContent[view];
   const Icon = content.icon;
@@ -505,6 +677,20 @@ export default function App() {
       : comingSoonContent[activeView]?.title || "Overview";
 
 
+  
+  async function refreshTasks() {
+    const response = await fetch("/api/tasks");
+
+    if (!response.ok) {
+      throw new Error("Task was saved, but the task list couldn't refresh. Reload the page.");
+    }
+
+    const data = await response.json();
+    setTasks(data.tasks);
+  }
+
+
+
   function navigateTo(view) {
     setActiveView(view);
     setSidebarOpen(false);
@@ -549,9 +735,17 @@ export default function App() {
                 loading={loading}
               />
             )
-          ) : (
-            <ComingSoonView view={activeView} />
-        )}
+          
+            ) : activeView === "tasks" ? (
+              <TasksView
+                tasks={tasks}
+                onTaskCreated={refreshTasks}
+                loading={loading}
+              />
+            ) : (
+              <ComingSoonView view={activeView} />
+            )}
+
         </div>
         <footer className="page-footer">
           <span>LEXA</span>
