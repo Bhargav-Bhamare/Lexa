@@ -597,6 +597,187 @@ function TasksView({ tasks, onTaskCreated, loading }) {
 }
 
 
+function ShoppingView({ shoppingItems, onShoppingChanged, loading }) {
+  const [name, setName] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleAdd(event) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    const parsedQuantity = Number(quantity);
+
+    if (!name.trim()) {
+      setError("Please enter an item name.");
+      return;
+    }
+
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
+      setError("Quantity must be a whole number of at least 1.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const response = await fetch("/api/shopping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          quantity: parsedQuantity,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Couldn't add the shopping item."
+        );
+      }
+
+      await onShoppingChanged();
+      setName("");
+      setQuantity("1");
+      setSuccess("Item added to your shopping list!");
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function togglePurchased(item) {
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch(`/api/shopping/${item._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purchased: !item.purchased }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Couldn't update this item."
+        );
+      }
+
+      await onShoppingChanged();
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    }
+  }
+
+  const remaining = shoppingItems.filter((item) => !item.purchased).length;
+
+  return (
+    <section className="panel shopping-page">
+      <div className="shopping-page-heading">
+        <div>
+          <p className="eyebrow">THE HOUSEHOLD LIST</p>
+          <h2>Shopping list</h2>
+          <p className="standalone-description">
+            Keep track of the things your household needs.
+          </p>
+        </div>
+        <span className="shopping-count">{remaining} remaining</span>
+      </div>
+
+      <form className="shopping-form" onSubmit={handleAdd}>
+        <h3>Add an item</h3>
+
+        <div className="shopping-form-row">
+          <div className="shopping-name-field">
+            <label htmlFor="shopping-name">Item name</label>
+            <input
+              id="shopping-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="e.g. Milk"
+              maxLength={100}
+              required
+            />
+          </div>
+
+          <div className="shopping-quantity-field">
+            <label htmlFor="shopping-quantity">Quantity</label>
+            <input
+              id="shopping-quantity"
+              type="number"
+              min="1"
+              step="1"
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+              required
+            />
+          </div>
+        </div>
+
+        {error && <p className="shopping-error" role="alert">{error}</p>}
+        {success && <p className="shopping-success" role="status">{success}</p>}
+
+        <button className="shopping-submit-button" type="submit" disabled={saving}>
+          {saving ? "Adding..." : "Add to list"}
+        </button>
+      </form>
+
+      <div className="shopping-list-heading">
+        <h3>Your items</h3>
+        <span>{shoppingItems.length} total</span>
+      </div>
+
+      {loading ? (
+        <p className="data-placeholder">Loading shopping list...</p>
+      ) : shoppingItems.length === 0 ? (
+        <p className="data-placeholder">
+          Your list is empty. Add your first shopping item above.
+        </p>
+      ) : (
+        <div className="shopping-items-list">
+          {shoppingItems.map((item) => (
+            <article
+              className={`shopping-item ${item.purchased ? "is-purchased" : ""}`}
+              key={item._id}
+            >
+              <label className="shopping-item-check">
+                <input
+                  type="checkbox"
+                  checked={Boolean(item.purchased)}
+                  onChange={() => togglePurchased(item)}
+                  aria-label={`Mark ${item.name} as ${item.purchased ? "not purchased" : "purchased"}`}
+                />
+                <span className="shopping-custom-check" />
+              </label>
+
+              <div className="shopping-item-copy">
+                <p className="shopping-item-name">{item.name}</p>
+                <p className="shopping-item-quantity">
+                  Quantity: {item.quantity}
+                </p>
+              </div>
+
+              <span className="shopping-item-status">
+                {item.purchased ? "Purchased" : "Needed"}
+              </span>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+
+
 function ComingSoonView({ view }) {
   const content = comingSoonContent[view];
   const Icon = content.icon;
@@ -689,6 +870,19 @@ export default function App() {
     setTasks(data.tasks);
   }
 
+  
+  async function refreshShopping() {
+    const response = await fetch("/api/shopping");
+
+    if (!response.ok) {
+      throw new Error("Shopping list couldn't refresh. Reload the page.");
+    }
+
+    const data = await response.json();
+    setShoppingItems(data.items);
+  }
+
+
 
 
   function navigateTo(view) {
@@ -736,15 +930,23 @@ export default function App() {
               />
             )
           
+            
             ) : activeView === "tasks" ? (
               <TasksView
                 tasks={tasks}
                 onTaskCreated={refreshTasks}
                 loading={loading}
               />
+            ) : activeView === "shopping" ? (
+              <ShoppingView
+                shoppingItems={shoppingItems}
+                onShoppingChanged={refreshShopping}
+                loading={loading}
+              />
             ) : (
               <ComingSoonView view={activeView} />
             )}
+
 
         </div>
         <footer className="page-footer">
