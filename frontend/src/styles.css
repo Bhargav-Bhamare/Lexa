@@ -1888,3 +1888,49 @@ button:disabled {
     padding: 0 13px;
   }
 }
+
+
+.assistant-confirmation {
+  margin-bottom: 15px;
+  padding: 16px;
+  border: 1px solid #596d42;
+  border-radius: 12px;
+  background: #20251b;
+}
+
+.assistant-confirmation p {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.assistant-confirmation pre {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: #111310;
+  color: #d8e8c4;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assistant-confirmation-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.assistant-confirmation-buttons button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #c2df97;
+  color: #171b13;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.assistant-confirmation-buttons button:last-child {
+  border: 1px solid #4b5046;
+  background: transparent;
+  color: #f1f3ec;
+}

@@ -1006,6 +1006,8 @@ function AssistantView() {
     },
   ]);
   const [sending, setSending] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [actionBusy, setActionBusy] = useState(false);
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -1041,7 +1043,9 @@ function AssistantView() {
           content: data.reply || "I couldn't generate a response.",
         },
       ]);
-    } catch (error) {
+
+      setPendingAction(data.pendingAction || null);
+          } catch (error) {
       setMessages((previous) => [
         ...previous,
         {
@@ -1053,6 +1057,74 @@ function AssistantView() {
       setSending(false);
     }
   }
+
+    async function confirmAction() {
+    if (!pendingAction || actionBusy) return;
+
+    setActionBusy(true);
+
+    try {
+      const response = await fetch("/api/assistant/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actionId: pendingAction.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Action failed.");
+      }
+
+      setMessages((previous) => [
+        ...previous,
+        { role: "assistant", content: data.reply || "Action completed." },
+      ]);
+
+      setPendingAction(null);
+    } catch (error) {
+      setMessages((previous) => [
+        ...previous,
+        { role: "assistant", content: `Action failed: ${error.message}` },
+      ]);
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function cancelAction() {
+  if (!pendingAction || actionBusy) return;
+
+  setActionBusy(true);
+
+  try {
+    const response = await fetch("/api/assistant/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actionId: pendingAction.id }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not cancel the action.");
+    }
+
+    setPendingAction(null);
+
+    setMessages((previous) => [
+      ...previous,
+      { role: "assistant", content: "Okay, I cancelled that action." },
+    ]);
+  } catch (error) {
+    setMessages((previous) => [
+      ...previous,
+      { role: "assistant", content: `Cancellation failed: ${error.message}` },
+    ]);
+  } finally {
+    setActionBusy(false);
+  }
+}
 
   return (
     <section className="assistant-panel panel">
@@ -1088,6 +1160,35 @@ function AssistantView() {
           </div>
         )}
       </div>
+      {pendingAction && (
+      <div className="assistant-confirmation">
+        <p>
+          <strong>Confirm this action?</strong>
+        </p>
+        <p>
+          Tool: <code>{pendingAction.toolName}</code>
+        </p>
+        <pre>{JSON.stringify(pendingAction.args, null, 2)}</pre>
+
+        <div className="assistant-confirmation-buttons">
+          <button
+            type="button"
+            onClick={confirmAction}
+            disabled={actionBusy}
+          >
+            {actionBusy ? "Processing..." : "Confirm"}
+          </button>
+
+          <button
+            type="button"
+            onClick={cancelAction}
+            disabled={actionBusy}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
 
       <form className="assistant-form" onSubmit={sendMessage}>
         <input
