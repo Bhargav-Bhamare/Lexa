@@ -996,6 +996,121 @@ function ComingSoonView({ view }) {
 }
 
 
+function AssistantView() {
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content:
+        "Hey! I'm Lexa. Ask me about your tasks, shopping list, or reminders.",
+    },
+  ]);
+  const [sending, setSending] = useState(false);
+
+  async function sendMessage(event) {
+    event.preventDefault();
+
+    const text = message.trim();
+
+    if (!text || sending) return;
+
+    setMessages((previous) => [
+      ...previous,
+      { role: "user", content: text },
+    ]);
+    setMessage("");
+    setSending(true);
+
+    try {
+      const response = await fetch("/api/assistant/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Lexa couldn't respond.");
+      }
+
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "assistant",
+          content: data.reply || "I couldn't generate a response.",
+        },
+      ]);
+    } catch (error) {
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "assistant",
+          content: `Sorry, something went wrong: ${error.message}`,
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section className="assistant-panel panel">
+      <div className="assistant-heading">
+        <div className="standalone-icon">
+          <MessageCircle size={22} aria-hidden="true" />
+        </div>
+        <div>
+          <p className="eyebrow">YOUR HOUSEHOLD ASSISTANT</p>
+          <h2>Ask Lexa</h2>
+          <p className="assistant-subtitle">
+            Powered by local AI and your household data
+          </p>
+        </div>
+      </div>
+
+      <div className="assistant-messages" aria-live="polite">
+        {messages.map((item, index) => (
+          <div
+            key={index}
+            className={`assistant-message assistant-message-${item.role}`}
+          >
+            <span className="assistant-message-label">
+              {item.role === "user" ? "YOU" : "LEXA"}
+            </span>
+            <p>{item.content}</p>
+          </div>
+        ))}
+
+        {sending && (
+          <div className="assistant-typing" role="status">
+            Lexa is thinking...
+          </div>
+        )}
+      </div>
+
+      <form className="assistant-form" onSubmit={sendMessage}>
+        <input
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder="Ask about tasks, shopping, reminders..."
+          aria-label="Message Lexa"
+          maxLength={2000}
+          disabled={sending}
+        />
+        <button type="submit" disabled={sending || !message.trim()}>
+          {sending ? "Thinking..." : "Send"}
+        </button>
+      </form>
+
+      <p className="assistant-disclaimer">
+        Lexa can currently answer questions about saved household data.
+      </p>
+    </section>
+  );
+}
+
+
 export default function App() {
   const [activeView, setActiveView] = useState("overview");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -1159,6 +1274,8 @@ export default function App() {
                 onRemindersChanged={refreshReminders}
                 loading={loading}
               />
+            ) : activeView === "assistant" ? (
+              <AssistantView />
             ) : (
               <ComingSoonView view={activeView} />
             )}
