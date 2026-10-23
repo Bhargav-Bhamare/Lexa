@@ -777,6 +777,203 @@ function ShoppingView({ shoppingItems, onShoppingChanged, loading }) {
 }
 
 
+function RemindersView({ reminders, onRemindersChanged, loading }) {
+  const [title, setTitle] = useState("");
+  const [remindAt, setRemindAt] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [updatingId, setUpdatingId] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleCreate(event) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!title.trim()) {
+      setError("Please enter a reminder title.");
+      return;
+    }
+
+    if (!remindAt || !Number.isFinite(new Date(remindAt).getTime())) {
+      setError("Please select a valid reminder date and time.");
+      return;
+    }
+
+    if (new Date(remindAt).getTime() <= Date.now()) {
+      setError("Please choose a future date and time.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const response = await fetch("/api/reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          remindAt: new Date(remindAt).toISOString(),
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || "Couldn't create the reminder."
+        );
+      }
+
+      await onRemindersChanged();
+      setTitle("");
+      setRemindAt("");
+      setSuccess("Reminder created successfully!");
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleCompleted(reminder) {
+    setError("");
+    setSuccess("");
+    setUpdatingId(reminder._id);
+
+    try {
+      const response = await fetch(`/api/reminders/${reminder._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !reminder.completed }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || "Couldn't update the reminder."
+        );
+      }
+
+      await onRemindersChanged();
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
+  const sortedReminders = [...reminders].sort(
+    (a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime()
+  );
+
+  const pendingCount = reminders.filter(
+    (reminder) => !reminder.completed
+  ).length;
+
+  return (
+    <section className="panel reminders-page">
+      <div className="reminders-page-heading">
+        <div>
+          <p className="eyebrow">WHAT'S COMING UP</p>
+          <h2>Reminders</h2>
+          <p className="standalone-description">
+            Keep important moments and plans on your radar.
+          </p>
+        </div>
+        <span className="reminders-count">{pendingCount} pending</span>
+      </div>
+
+      <form className="reminder-form" onSubmit={handleCreate}>
+        <h3>Create a reminder</h3>
+
+        <label htmlFor="reminder-title">What do you need to remember?</label>
+        <input
+          id="reminder-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="e.g. Pay electricity bill"
+          maxLength={150}
+          required
+        />
+
+        <label htmlFor="reminder-datetime">Date and time</label>
+        <input
+          id="reminder-datetime"
+          type="datetime-local"
+          value={remindAt}
+          min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+          onChange={(event) => setRemindAt(event.target.value)}
+          required
+        />
+
+        {error && <p className="reminder-error" role="alert">{error}</p>}
+        {success && <p className="reminder-success" role="status">{success}</p>}
+
+        <button
+          className="reminder-submit-button"
+          type="submit"
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Create reminder"}
+        </button>
+      </form>
+
+      <div className="reminders-list-heading">
+        <h3>All reminders</h3>
+        <span>{reminders.length} total</span>
+      </div>
+
+      {loading ? (
+        <p className="data-placeholder">Loading reminders...</p>
+      ) : sortedReminders.length === 0 ? (
+        <p className="data-placeholder">
+          No reminders yet. Create your first reminder above.
+        </p>
+      ) : (
+        <div className="reminders-list">
+          {sortedReminders.map((reminder) => (
+            <article
+              className={`reminder-list-item ${reminder.completed ? "is-completed" : ""}`}
+              key={reminder._id}
+            >
+              <label className="reminder-check">
+                <input
+                  type="checkbox"
+                  checked={Boolean(reminder.completed)}
+                  disabled={updatingId === reminder._id}
+                  onChange={() => toggleCompleted(reminder)}
+                  aria-label={`Mark ${reminder.title} as ${reminder.completed ? "incomplete" : "completed"}`}
+                />
+                <span className="reminder-custom-check" />
+              </label>
+
+              <div className="reminder-list-copy">
+                <p className="reminder-list-title">{reminder.title}</p>
+                <p className="reminder-list-date">
+                  {new Intl.DateTimeFormat(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  }).format(new Date(reminder.remindAt))}
+                </p>
+              </div>
+
+              <span className="reminder-list-status">
+                {reminder.completed ? "Completed" : "Pending"}
+              </span>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function ComingSoonView({ view }) {
   const content = comingSoonContent[view];
@@ -882,6 +1079,18 @@ export default function App() {
     setShoppingItems(data.items);
   }
 
+  
+  async function refreshReminders() {
+    const response = await fetch("/api/reminders");
+
+    if (!response.ok) {
+      throw new Error("Reminders couldn't refresh. Reload the page.");
+    }
+
+    const data = await response.json();
+    setReminders(data.reminders);
+  }
+
 
 
 
@@ -931,6 +1140,7 @@ export default function App() {
             )
           
             
+            
             ) : activeView === "tasks" ? (
               <TasksView
                 tasks={tasks}
@@ -943,9 +1153,16 @@ export default function App() {
                 onShoppingChanged={refreshShopping}
                 loading={loading}
               />
+            ) : activeView === "reminders" ? (
+              <RemindersView
+                reminders={reminders}
+                onRemindersChanged={refreshReminders}
+                loading={loading}
+              />
             ) : (
               <ComingSoonView view={activeView} />
             )}
+
 
 
         </div>
