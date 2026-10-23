@@ -6,10 +6,12 @@ const Task = require("./models/Task");
 const ShoppingItem = require("./models/ShoppingItem");
 const Reminder = require("./models/Reminder");
 const { listTasks } = require("./services/taskService");
+const assistantRouter = require("./assistant");
+
 
 const app = express();
 app.use(express.json());
-
+app.use("/api/assistant", assistantRouter);
 
 const port = 3000;
 
