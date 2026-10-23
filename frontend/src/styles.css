@@ -1078,3 +1078,60 @@ button:disabled {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Live tasks and reminders */
+.live-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.live-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border, #292c26);
+}
+
+.live-list-item:last-child {
+  border-bottom: none;
+}
+
+.live-item-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #c3e58a;
+  background: rgba(195, 229, 138, 0.09);
+}
+
+.reminder-item-icon {
+  color: #9dc8ff;
+  background: rgba(157, 200, 255, 0.09);
+}
+
+.live-item-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.live-item-title {
+  margin: 0;
+  color: #e8eae4;
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.live-item-meta {
+  margin: 5px 0 0;
+  color: #8f948a;
+  font-size: 11px;
+  text-transform: capitalize;
+}

@@ -312,11 +312,34 @@ function Overview({ tasks, shoppingItems, reminders, loading }){
               View all
             </button>
           </div>
-          <DataPlaceholder
-            icon={CheckSquare}
-            title="Your task list is waiting"
-            description="Connect Lexa to see the tasks your household is tracking."
-          />
+          {loading ? (
+            <p className="data-placeholder">Loading tasks...</p>
+          ) : tasks.length === 0 ? (
+            <DataPlaceholder
+              icon={CheckSquare}
+              title="All clear for now"
+              description="Your household tasks will appear here when you add them."
+            />
+          ) : (
+            <div className="live-list">
+              {tasks.slice(0, 4).map((task) => (
+                <div className="live-list-item" key={task._id}>
+                  <span className="live-item-icon">
+                    <CheckSquare size={16} aria-hidden="true" />
+                  </span>
+
+                  <div className="live-item-copy">
+                    <p className="live-item-title">{task.title}</p>
+                    <p className="live-item-meta">
+                      {task.priority || "medium"} priority
+                      {" · "}
+                      {(task.status || "pending").replace("_", " ")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
 
         <article className="panel panel-reminders">
@@ -331,11 +354,54 @@ function Overview({ tasks, shoppingItems, reminders, loading }){
               View all
             </button>
           </div>
+          {loading ? (
+          <p className="data-placeholder">Loading reminders...</p>
+        ) : reminders.filter(
+            (reminder) =>
+              !reminder.completed &&
+              new Date(reminder.remindAt).getTime() >= Date.now()
+          ).length === 0 ? (
           <DataPlaceholder
             icon={Bell}
-            title="Nothing shown just yet"
-            description="Upcoming reminders will show here after the API is connected."
+            title="Nothing coming up"
+            description="Your upcoming reminders will appear here."
           />
+        ) : (
+          <div className="live-list">
+            {reminders
+              .filter(
+                (reminder) =>
+                  !reminder.completed &&
+                  new Date(reminder.remindAt).getTime() >= Date.now()
+              )
+              .sort(
+                (a, b) =>
+                  new Date(a.remindAt).getTime() -
+                  new Date(b.remindAt).getTime()
+              )
+              .slice(0, 4)
+              .map((reminder) => (
+                <div className="live-list-item" key={reminder._id}>
+                  <span className="live-item-icon reminder-item-icon">
+                    <Bell size={16} aria-hidden="true" />
+                  </span>
+
+                  <div className="live-item-copy">
+                    <p className="live-item-title">{reminder.title}</p>
+                    <p className="live-item-meta">
+                      {new Intl.DateTimeFormat(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      }).format(new Date(reminder.remindAt))}
+                    </p>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
         </article>
       </section>
 
