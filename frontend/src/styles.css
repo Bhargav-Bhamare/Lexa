@@ -79,27 +79,16 @@ button:disabled {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   color: var(--color-text);
   text-decoration: none;
 }
 
-.brand-mark {
-  display: grid;
-  width: 31px;
-  height: 31px;
-  place-items: center;
-  border: 1px solid #46523a;
-  border-radius: 10px;
-  background: #252d1e;
-  color: var(--color-accent);
-}
-
-.brand-name {
-  font-family: Manrope, sans-serif;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -1.4px;
+.brand-logo {
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+  object-fit: cover;
 }
 
 .workspace-switcher {
@@ -812,9 +801,12 @@ button:disabled {
   font-size: 9px;
 }
 
-.page-footer span:first-child {
-  font-weight: 700;
-  letter-spacing: 1px;
+.page-footer img {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
 }
 
 @media (min-width: 1500px) {

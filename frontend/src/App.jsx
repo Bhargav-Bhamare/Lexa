@@ -5,7 +5,6 @@ import {
   CheckSquare,
   ChevronDown,
   CircleHelp,
-  Command,
   House,
   Menu,
   MessageCircle,
@@ -57,10 +56,7 @@ const comingSoonContent = {
 function Brand() {
   return (
     <a className="brand" href="#overview" aria-label="Lexa home">
-      <span className="brand-mark" aria-hidden="true">
-        <Command size={19} strokeWidth={2.4} />
-      </span>
-      <span className="brand-name">lexa</span>
+      <img className="brand-logo" src="/logo2.png" alt="Lexa" />
     </a>
   );
 }
@@ -233,7 +229,7 @@ function MetricCard({ icon: Icon, label, accent, value, loading }) {
 }
 
 
-function Overview({ tasks, shoppingItems, reminders, loading }){
+function Overview({ tasks, shoppingItems, reminders, loading, onAskLexa }){
   return (
     <>
       <section className="welcome-card">
@@ -411,12 +407,13 @@ function Overview({ tasks, shoppingItems, reminders, loading }){
         </span>
         <div className="assistant-banner-copy">
           <p className="assistant-banner-title">A hand when you need one.</p>
-          <p>
-            Ask Lexa to help coordinate your home. The assistant API is not
-            connected yet.
-          </p>
+          <p>Ask Lexa to help coordinate your home.</p>
         </div>
-        <button className="assistant-banner-button" type="button" disabled>
+        <button
+          className="assistant-banner-button"
+          type="button"
+          onClick={onAskLexa}
+        >
           <Plus size={16} aria-hidden="true" />
           Ask Lexa
         </button>
@@ -1393,6 +1390,7 @@ export default function App() {
                 shoppingItems={shoppingItems}
                 reminders={reminders}
                 loading={loading}
+                onAskLexa={() => navigateTo("assistant")}
               />
             )
           
@@ -1426,7 +1424,7 @@ export default function App() {
 
         </div>
         <footer className="page-footer">
-          <span>LEXA</span>
+          <img src="/logo2.png" alt="Lexa" />
           <span>Your household, coordinated.</span>
         </footer>
       </main>
