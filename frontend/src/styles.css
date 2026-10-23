@@ -1903,15 +1903,41 @@ button:disabled {
   font-size: 13px;
 }
 
-.assistant-confirmation pre {
-  overflow-x: auto;
-  padding: 12px;
+.assistant-confirmation-title {
+  color: #d8e8c4;
+  font-size: 15px !important;
+}
+
+.assistant-confirmation-item {
+  color: #e5e9df;
+}
+
+.assistant-confirmation-changes {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.assistant-confirmation-changes p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
   border-radius: 8px;
   background: #111310;
-  color: #d8e8c4;
-  font-size: 12px;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.assistant-confirmation-changes p > span:first-child {
+  min-width: 90px;
+  color: #a9b09f;
+}
+
+.assistant-change-old {
+  color: #a9b09f;
+  text-decoration: line-through;
 }
 
 .assistant-confirmation-buttons {

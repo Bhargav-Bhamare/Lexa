@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   Check,
@@ -995,6 +995,18 @@ function ComingSoonView({ view }) {
   );
 }
 
+function formatActionValue(field, value) {
+  if (value === null || value === undefined || value === "") return "Not set";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (
+    ["dueAt", "remindAt"].includes(field) &&
+    typeof value === "string" &&
+    !Number.isNaN(Date.parse(value))
+  ) {
+    return new Date(value).toLocaleString();
+  }
+  return String(value);
+}
 
 function AssistantView() {
   const [message, setMessage] = useState("");
@@ -1008,13 +1020,14 @@ function AssistantView() {
   const [sending, setSending] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const actionInFlight = useRef(false);
 
   async function sendMessage(event) {
     event.preventDefault();
 
     const text = message.trim();
 
-    if (!text || sending) return;
+    if (!text || sending || pendingAction) return;
 
     setMessages((previous) => [
       ...previous,
@@ -1045,7 +1058,7 @@ function AssistantView() {
       ]);
 
       setPendingAction(data.pendingAction || null);
-          } catch (error) {
+    } catch (error) {
       setMessages((previous) => [
         ...previous,
         {
@@ -1058,19 +1071,22 @@ function AssistantView() {
     }
   }
 
-    async function confirmAction() {
-    if (!pendingAction || actionBusy) return;
+  async function confirmAction() {
+    if (!pendingAction || actionInFlight.current) return;
 
+    actionInFlight.current = true;
     setActionBusy(true);
+    const actionId = pendingAction.id;
 
     try {
       const response = await fetch("/api/assistant/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actionId: pendingAction.id }),
+        body: JSON.stringify({ actionId }),
       });
 
       const data = await response.json();
+      setPendingAction(null);
 
       if (!response.ok) {
         throw new Error(data.error || "Action failed.");
@@ -1080,51 +1096,51 @@ function AssistantView() {
         ...previous,
         { role: "assistant", content: data.reply || "Action completed." },
       ]);
-
-      setPendingAction(null);
     } catch (error) {
       setMessages((previous) => [
         ...previous,
         { role: "assistant", content: `Action failed: ${error.message}` },
       ]);
     } finally {
+      actionInFlight.current = false;
       setActionBusy(false);
     }
   }
 
   async function cancelAction() {
-  if (!pendingAction || actionBusy) return;
+    if (!pendingAction || actionInFlight.current) return;
 
-  setActionBusy(true);
+    actionInFlight.current = true;
+    setActionBusy(true);
 
-  try {
-    const response = await fetch("/api/assistant/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ actionId: pendingAction.id }),
-    });
+    try {
+      const response = await fetch("/api/assistant/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actionId: pendingAction.id }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
+      setPendingAction(null);
 
-    if (!response.ok) {
-      throw new Error(data.error || "Could not cancel the action.");
+      if (!response.ok) {
+        throw new Error(data.error || "Could not cancel the action.");
+      }
+
+      setMessages((previous) => [
+        ...previous,
+        { role: "assistant", content: "Okay, I cancelled that action." },
+      ]);
+    } catch (error) {
+      setMessages((previous) => [
+        ...previous,
+        { role: "assistant", content: `Cancellation failed: ${error.message}` },
+      ]);
+    } finally {
+      actionInFlight.current = false;
+      setActionBusy(false);
     }
-
-    setPendingAction(null);
-
-    setMessages((previous) => [
-      ...previous,
-      { role: "assistant", content: "Okay, I cancelled that action." },
-    ]);
-  } catch (error) {
-    setMessages((previous) => [
-      ...previous,
-      { role: "assistant", content: `Cancellation failed: ${error.message}` },
-    ]);
-  } finally {
-    setActionBusy(false);
   }
-}
 
   return (
     <section className="assistant-panel panel">
@@ -1161,34 +1177,56 @@ function AssistantView() {
         )}
       </div>
       {pendingAction && (
-      <div className="assistant-confirmation">
-        <p>
-          <strong>Confirm this action?</strong>
-        </p>
-        <p>
-          Tool: <code>{pendingAction.toolName}</code>
-        </p>
-        <pre>{JSON.stringify(pendingAction.args, null, 2)}</pre>
+        <div className="assistant-confirmation">
+          <p className="assistant-confirmation-title">
+            <strong>
+              {pendingAction.preview?.kind === "update"
+                ? "Review this update"
+                : "Review this new item"}
+            </strong>
+          </p>
+          <p className="assistant-confirmation-item">
+            {pendingAction.preview?.kind === "update" ? "Existing " : "New "}
+            {pendingAction.preview?.entity || "item"}:{" "}
+            <strong>{pendingAction.preview?.itemLabel || "Household item"}</strong>
+          </p>
 
-        <div className="assistant-confirmation-buttons">
-          <button
-            type="button"
-            onClick={confirmAction}
-            disabled={actionBusy}
-          >
-            {actionBusy ? "Processing..." : "Confirm"}
-          </button>
+          <div className="assistant-confirmation-changes">
+            {pendingAction.preview?.changes?.map((change) => (
+              <p key={change.field}>
+                <span>{change.label}</span>
+                {pendingAction.preview.kind === "update" && (
+                  <>
+                    <span className="assistant-change-old">
+                      {formatActionValue(change.field, change.from)}
+                    </span>
+                    <span aria-hidden="true">→</span>
+                  </>
+                )}
+                <strong>{formatActionValue(change.field, change.to)}</strong>
+              </p>
+            ))}
+          </div>
 
-          <button
-            type="button"
-            onClick={cancelAction}
-            disabled={actionBusy}
-          >
-            Cancel
-          </button>
+          <div className="assistant-confirmation-buttons">
+            <button
+              type="button"
+              onClick={confirmAction}
+              disabled={actionBusy}
+            >
+              {actionBusy ? "Processing..." : "Confirm"}
+            </button>
+
+            <button
+              type="button"
+              onClick={cancelAction}
+              disabled={actionBusy}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
       <form className="assistant-form" onSubmit={sendMessage}>
         <input
@@ -1197,9 +1235,12 @@ function AssistantView() {
           placeholder="Ask about tasks, shopping, reminders..."
           aria-label="Message Lexa"
           maxLength={2000}
-          disabled={sending}
+          disabled={sending || Boolean(pendingAction)}
         />
-        <button type="submit" disabled={sending || !message.trim()}>
+        <button
+          type="submit"
+          disabled={sending || Boolean(pendingAction) || !message.trim()}
+        >
           {sending ? "Thinking..." : "Send"}
         </button>
       </form>
